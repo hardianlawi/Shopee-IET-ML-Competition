@@ -2,6 +2,8 @@
 
 The aim of the project is to build a model that can predict the classification of the input images. The training/test sets are images provided by Shopee, which are classified into 18 categories.
 
+Metrics: `Accuracy` (Presumably)
+
 # Steps
 
 ## Data Exploration
@@ -59,15 +61,20 @@ Different evaluation methods that are possible:
 - K-Fold Cross Validation / Stratified K-Fold (More robust if the dataset is small, but more expensive)
 - Holdout / Stratified Holdout (Good if the dataset is enough)
 
+Save training results for future analysis
+
+## Retrain model
+
+Before generating prediction, retrain every model using the whole training data available.
+
+## Submission
+
+Generate submission file with the same format as `sample submission.csv`. Always save with different name files that explains how they are generated.
+
 ## Error Analysis
 
 Main analysis:
 
 - Bias & Variance Trade-off
-
-## Submission
-
-Generate submission with the same format as `sample submission.csv`. Always save with different name files that explains how they are generated.
-
 
 # Attempts Made
