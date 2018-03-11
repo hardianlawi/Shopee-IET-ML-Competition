@@ -59,6 +59,12 @@ Different evaluation methods that are possible:
 - K-Fold Cross Validation / Stratified K-Fold (More robust if the dataset is small, but more expensive)
 - Holdout / Stratified Holdout (Good if the dataset is enough)
 
+## Error Analysis
+
+Main analysis:
+
+- Bias & Variance Trade-off
+
 ## Submission
 
 Generate submission with the same format as `sample submission.csv`. Always save with different name files that explains how they are generated.
