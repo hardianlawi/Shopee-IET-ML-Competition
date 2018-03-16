@@ -1,5 +1,7 @@
+import numpy as np
 from keras.models import Model
-from keras.layers import Dense, Flatten
+from keras.layers import Dense, Flatten, Dropout
+from keras.regularizers import l2
 from keras.preprocessing.image import load_img, img_to_array
 from keras.applications import (
     vgg16,
@@ -29,13 +31,13 @@ def load_preprocess_input(model_type):
     return preprocess_input
 
 
-def load_model(model_type, input_shape, n_classes, include_top=False, flatten_fn=Flatten()):
+def load_model(model_type, input_shape, n_classes=None, include_top=True, stack_new_layers=True, flatten_fn=Flatten(), dropout_rate=0.5):
 
     if model_type == "VGG19":
         base_model = vgg19.VGG19(weights="imagenet", include_top=include_top, input_shape=input_shape)
     elif model_type == "VGG16":
         base_model = vgg16.VGG16(weights="imagenet", include_top=include_top, input_shape=input_shape)
-    elif model_type == "InceptionResNet":
+    elif model_type == "InceptionResNetV2":
         base_model = inception_resnet_v2.InceptionResnetV2(weights="imagenet", include_top=include_top, input_shape=input_shape)
     elif model_type == "ResNet50":
         base_model = resnet50.ResNet50(weights="imagenet", include_top=include_top, input_shape=input_shape)
@@ -50,15 +52,22 @@ def load_model(model_type, input_shape, n_classes, include_top=False, flatten_fn
         base_model.layers.pop()
 
         # Create last layer
-        x = Dense(n_classes, name="predictions")(base_model.layers[-1].output)
+        x = Dense(n_classes, activation="softmax", W_regularizer=l2(.0005), name="predictions")(base_model.layers[-1].output)
 
     else:
 
         x = base_model.output
         x = flatten_fn(x)
-        x = Dense(4096, name="fc1")(x)
-        x = Dense(4096, name="fc2")(x)
-        x = Dense(n_classes, name="predictions")(x)
+
+        if stack_new_layers:
+
+            x = Dense(4096, name="fc1")(x)
+            if dropout_rate:
+                x = Dropout(dropout_rate)(x)
+            x = Dense(4096, name="fc2")(x)
+            if dropout_rate:
+                x = Dropout(dropout_rate)(x)
+            x = Dense(n_classes, activation="softmax", W_regularizer=l2(.0005), name="predictions")(x)
 
     # Redefine model
     model = Model(inputs=base_model.input, outputs=x)
@@ -67,13 +76,16 @@ def load_model(model_type, input_shape, n_classes, include_top=False, flatten_fn
 
 
 def load_images(filepaths, input_shape):
+
     all_imgs, broken_imgs = [], []
+
     for i, filename in enumerate(filepaths):
         try:
             img = load_img(filename, target_size=input_shape)
-            img = img_to_array(img)
+            img = img_to_array(img).astype(np.float32)
             all_imgs.append(img)
         except:
             broken_imgs.append(i)
             print(filename, "is broken")
+
     return all_imgs, broken_imgs
