@@ -9,10 +9,10 @@ import keras.backend as K
 from keras import optimizers
 from keras.utils import to_categorical
 from keras.preprocessing.image import ImageDataGenerator
-from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, CSVLogger, EarlyStopping, LearningRateScheduler, LearningRateTracker
+from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, CSVLogger, EarlyStopping, LearningRateScheduler
 
 from sklearn.model_selection import StratifiedKFold
-from tools.util import load_model, load_images, load_preprocess_input, scheduler
+from tools.util import load_model, load_images, load_preprocess_input, scheduler, LearningRateTracker
 
 
 np.random.seed(2018)
