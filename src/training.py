@@ -5,13 +5,14 @@ import numpy as np
 import pandas as pd
 
 import keras.backend as K
+
 from keras import optimizers
 from keras.utils import to_categorical
 from keras.preprocessing.image import ImageDataGenerator
-from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, CSVLogger, EarlyStopping
+from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, CSVLogger, EarlyStopping, LearningRateScheduler, LearningRateTracker
 
 from sklearn.model_selection import StratifiedKFold
-from tools.util import load_model, load_images, load_preprocess_input
+from tools.util import load_model, load_images, load_preprocess_input, scheduler
 
 
 np.random.seed(2018)
@@ -19,7 +20,7 @@ K.clear_session()
 
 # Model to use
 model_type = "InceptionV3"
-include_top = True
+include_top = False
 stack_new_layers = True
 data_augmentation = True
 input_shape = (299, 299, 3)
@@ -52,9 +53,9 @@ if not os.path.isdir(model_dir) or not os.path.exists(model_dir):
 
 # Training Config
 n_splits = 8  # No of split for skfold cross validation
-batch_size = 128  # No of samples fit every step
+batch_size = 64  # No of samples fit every step
 epochs = 100  # No of epochs
-lr = 0.001  # Optimizer learning rate
+lr = 0.01  # Optimizer learning rate
 
 # Read pre-generated dataset comprising of 3 columns (file, species, species_id)
 df = pd.read_csv(dataset).sample(frac=1.0, random_state=2018)
@@ -128,7 +129,7 @@ for train, val in skf.split(X, y):
     lr_reducer = ReduceLROnPlateau(
         factor=np.sqrt(0.1),
         cooldown=0,
-        patience=3,
+        patience=2,
         min_lr=0.5e-6
     )
 
@@ -142,7 +143,11 @@ for train, val in skf.split(X, y):
         mode='auto'
     )
 
-    callbacks = [checkpoint, lr_reducer, csv_logger, early_stopping]
+    lr_scheduler = LearningRateScheduler(scheduler)
+
+    lr_tracker = LearningRateTracker()
+
+    callbacks = [checkpoint, lr_reducer, csv_logger, early_stopping, lr_scheduler, lr_tracker]
 
     # Split training and validation
     Xtrain, ytrain = preprocess_input(X[train, :]), to_categorical(y[train, :], num_classes=n_classes)
@@ -157,7 +162,7 @@ for train, val in skf.split(X, y):
             samplewise_std_normalization=False,
             zca_whitening=False,
             zca_epsilon=1e-6,
-            rotation_range=180,
+            rotation_range=30,
             width_shift_range=0.,
             height_shift_range=0.,
             shear_range=0.,
@@ -166,7 +171,7 @@ for train, val in skf.split(X, y):
             fill_mode='nearest',
             cval=0.,
             horizontal_flip=True,
-            vertical_flip=True,
+            vertical_flip=False,
             rescale=None,
             preprocessing_function=None,
             data_format=K.image_data_format()
@@ -174,7 +179,7 @@ for train, val in skf.split(X, y):
 
         history = model.fit_generator(
             datagen.flow(Xtrain, ytrain, batch_size=batch_size),
-            validation_data=datagen.flow(Xval, yval, batch_size=batch_size),
+            validation_data=(Xval, yval),
             epochs=epochs,
             verbose=1,
             workers=16,

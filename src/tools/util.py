@@ -1,6 +1,8 @@
 import numpy as np
+import keras.backend as K
+from keras.callbacks import Callback
 from keras.models import Model
-from keras.layers import Dense, Flatten, Dropout
+from keras.layers import Dense, Flatten, Dropout, AveragePooling2D
 from keras.regularizers import l2
 from keras.preprocessing.image import load_img, img_to_array
 from keras.applications import (
@@ -57,16 +59,13 @@ def load_model(model_type, input_shape, n_classes=None, include_top=True, stack_
     else:
 
         x = base_model.output
-        x = flatten_fn(x)
+        # x = flatten_fn(x)
 
         if stack_new_layers:
 
-            # x = Dense(4096, name="fc1")(x)
-            # if dropout_rate:
-            #     x = Dropout(dropout_rate)(x)
-            # x = Dense(4096, name="fc2")(x)
-            # if dropout_rate:
-            #     x = Dropout(dropout_rate)(x)
+            x = AveragePooling2D(pool_size=(8, 8))(x)
+            x = Dropout(.4)(x)
+            x = Flatten()(x)
             x = Dense(n_classes, activation="softmax", W_regularizer=l2(.0005), name="predictions")(x)
 
     # Redefine model
@@ -89,3 +88,27 @@ def load_images(filepaths, input_shape):
             print(filename, "is broken")
 
     return all_imgs, broken_imgs
+
+
+class LearningRateTracker(Callback):
+
+    def on_epoch_end(self, epoch, logs=None):
+        lr = self.model.optimizer.lr
+        # If you want to apply decay.
+        decay = self.model.optimizer.decay
+        iterations = self.model.optimizer.iterations
+        lr_with_decay = lr / (1. + decay * K.cast(iterations, K.dtype(decay)))
+        print("At epoch %d" % iterations, "Learning rate is", K.eval(lr_with_decay))
+
+
+def scheduler(epoch):
+    if epoch < 15:
+        return 0.01
+    elif epoch < 28:
+        return 0.001
+    elif epoch < 40:
+        return 0.0004
+    elif epoch < 60:
+        return 0.00008
+    else:
+        return 0.000009
