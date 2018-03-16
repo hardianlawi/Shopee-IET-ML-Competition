@@ -5,6 +5,7 @@ from keras.models import Model
 from keras.layers import Dense, Flatten, Dropout, AveragePooling2D
 from keras.regularizers import l2
 from keras.preprocessing.image import load_img, img_to_array
+from keras.utils import multi_gpu_model
 from keras.applications import (
     vgg16,
     vgg19,
@@ -13,6 +14,23 @@ from keras.applications import (
     inception_resnet_v2,
     xception
 )
+
+
+class ModelMGPU(Model):
+    def __init__(self, ser_model, gpus):
+        pmodel = multi_gpu_model(ser_model, gpus)
+        self.__dict__.update(pmodel.__dict__)
+        self._smodel = ser_model
+
+    def __getattribute__(self, attrname):
+        '''Override load and save methods to be used from the serial-model. The
+        serial-model holds references to the weights in the multi-gpu model.
+        '''
+        # return Model.__getattribute__(self, attrname)
+        if 'load' in attrname or 'save' in attrname:
+            return getattr(self._smodel, attrname)
+
+        return super(ModelMGPU, self).__getattribute__(attrname)
 
 
 def load_preprocess_input(model_type):
@@ -78,7 +96,7 @@ def load_images(filepaths, input_shape):
 
     all_imgs, broken_imgs = [], []
 
-    for i, filename in enumerate(filepaths):
+    for i, filename in filepaths.iteritems():
         try:
             img = load_img(filename, target_size=input_shape)
             img = img_to_array(img).astype(np.float32)

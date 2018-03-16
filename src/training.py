@@ -52,7 +52,7 @@ if not os.path.isdir(model_dir) or not os.path.exists(model_dir):
     os.makedirs(model_dir)
 
 # Training Config
-n_splits = 8  # No of split for skfold cross validation
+n_splits = 7  # No of split for skfold cross validation
 batch_size = 64  # No of samples fit every step
 epochs = 100  # No of epochs
 lr = 0.01  # Optimizer learning rate
@@ -162,7 +162,7 @@ for train, val in skf.split(X, y):
             samplewise_std_normalization=False,
             zca_whitening=False,
             zca_epsilon=1e-6,
-            rotation_range=30,
+            rotation_range=0,
             width_shift_range=0.,
             height_shift_range=0.,
             shear_range=0.,
