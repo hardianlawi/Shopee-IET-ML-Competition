@@ -98,7 +98,7 @@ class LearningRateTracker(Callback):
         decay = self.model.optimizer.decay
         iterations = self.model.optimizer.iterations
         lr_with_decay = lr / (1. + decay * K.cast(iterations, K.dtype(decay)))
-        print("At epoch %d" % iterations, "Learning rate is", K.eval(lr_with_decay))
+        print("Learning rate is", K.eval(lr_with_decay))
 
 
 def scheduler(epoch):
