@@ -61,12 +61,12 @@ def load_model(model_type, input_shape, n_classes=None, include_top=True, stack_
 
         if stack_new_layers:
 
-            x = Dense(4096, name="fc1")(x)
-            if dropout_rate:
-                x = Dropout(dropout_rate)(x)
-            x = Dense(4096, name="fc2")(x)
-            if dropout_rate:
-                x = Dropout(dropout_rate)(x)
+            # x = Dense(4096, name="fc1")(x)
+            # if dropout_rate:
+            #     x = Dropout(dropout_rate)(x)
+            # x = Dense(4096, name="fc2")(x)
+            # if dropout_rate:
+            #     x = Dropout(dropout_rate)(x)
             x = Dense(n_classes, activation="softmax", W_regularizer=l2(.0005), name="predictions")(x)
 
     # Redefine model

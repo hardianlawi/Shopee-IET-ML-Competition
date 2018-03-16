@@ -22,7 +22,7 @@ model_type = "InceptionV3"
 include_top = True
 stack_new_layers = True
 data_augmentation = True
-input_shape = (224, 224, 3)
+input_shape = (299, 299, 3)
 dropout_rate = 0.5
 
 # Filepaths
@@ -54,7 +54,7 @@ if not os.path.isdir(model_dir) or not os.path.exists(model_dir):
 n_splits = 8  # No of split for skfold cross validation
 batch_size = 128  # No of samples fit every step
 epochs = 100  # No of epochs
-lr = 0.01  # Optimizer learning rate
+lr = 0.001  # Optimizer learning rate
 
 # Read pre-generated dataset comprising of 3 columns (file, species, species_id)
 df = pd.read_csv(dataset).sample(frac=1.0, random_state=2018)
@@ -72,12 +72,12 @@ test_imgs, broken_test_imgs = load_images(tDf.file, input_shape=input_shape)
 preprocess_input = load_preprocess_input(model_type)
 
 # Convert and process train images to numpy array
-X = np.array(all_imgs)  # Matrix of (m x 224 x 224 x 3)
+X = np.array(all_imgs)  # Matrix of (m x input_shape)
 y = df.drop(broken_imgs).as_matrix(columns=["category_id"])  # Convert target to numpy array of m x 1
 
 # Convert and process test images
 Xtest = np.array(test_imgs)
-Xtest = preprocess_input(Xtest).astype(np.float32)
+Xtest = preprocess_input(Xtest)
 
 # Check shapes
 assert X.shape == (len(all_imgs),) + input_shape
@@ -126,9 +126,9 @@ for train, val in skf.split(X, y):
     )
 
     lr_reducer = ReduceLROnPlateau(
-        factor=0.1,
+        factor=np.sqrt(0.1),
         cooldown=0,
-        patience=5,
+        patience=3,
         min_lr=0.5e-6
     )
 
@@ -137,7 +137,7 @@ for train, val in skf.split(X, y):
     early_stopping = EarlyStopping(
         monitor='val_acc',
         min_delta=0,
-        patience=5,
+        patience=10,
         verbose=0,
         mode='auto'
     )
