@@ -18,7 +18,7 @@ K.clear_session()
 
 # Model to use
 model_type = "InceptionV3"
-include_top = True
+include_top = False
 stack_new_layers = True
 input_shape = (299, 299)
 dropout_rate = 0.5
@@ -86,11 +86,10 @@ gc.collect()
 print("Start cross-validation training...")
 histories = []
 valDf = pd.DataFrame()
-i = 0
-for iteration in range(n_splits):
+for iteration in range(1, n_splits):
 
     # Define model name
-    model_name = '%s_model_{epoch:03d}_{val_acc:.2f}_iter%d.h5' % (model_type, i)
+    model_name = '%s_model_{epoch:03d}_{val_acc:.2f}_iter%d.h5' % (model_type, iteration)
     filepath = os.path.join(model_dir, model_name)
 
     # Load model
@@ -121,16 +120,16 @@ for iteration in range(n_splits):
         monitor="val_acc",
         factor=np.sqrt(0.1),
         cooldown=0,
-        patience=2,
+        patience=1,
         min_lr=0.5e-6
     )
 
-    csv_logger = CSVLogger(os.path.join(logs_dir, "%s_training_iter%d.csv" % (model_type, i)))
+    csv_logger = CSVLogger(os.path.join(logs_dir, "%s_training_iter%d.csv" % (model_type, iteration)))
 
     early_stopping = EarlyStopping(
         monitor='val_acc',
         min_delta=0,
-        patience=10,
+        patience=4,
         verbose=0,
         mode='auto'
     )
@@ -197,29 +196,36 @@ for iteration in range(n_splits):
     )
 
     # Generate second-level data
+    print("Generating second-level data...")
     for Xval, label in val_generator:
         val_predictions = model.predict(Xval, verbose=1)
         valDf = pd.concat([
             valDf,
-            pd.DataFrame(np.hstack([val_predictions, np.argmax(label, axis=-1)]), columns=["f"+str(x) for x in range(n_classes)] + ["category_id"])])
+            pd.DataFrame(
+                np.hstack([
+                    val_predictions,
+                    np.argmax(label, axis=-1)[:, np.newaxis]
+                ]),
+                columns=["f"+str(x) for x in range(n_classes)] + ["category_id"])
+        ])
+        break
 
-    del Xval, label
+    del Xval, label, val_predictions
     gc.collect()
 
     # Generate prediction on test data for ensembling
+    print("Generating prediction on test data...")
     test_predictions = model.predict(Xtest, verbose=1)
     testDf = pd.DataFrame({"id": tDf["id"]})
     testDf = pd.concat([testDf, pd.DataFrame(test_predictions, columns=["f"+str(x) for x in range(n_classes)])], axis=1)
     testDf.to_csv(
-        os.path.join(test_dir, "%s_test_iter%d.csv" % (model_type, i)),
+        os.path.join(test_dir, "%s_test_iter%d.csv" % (model_type, iteration)),
         index=False
     )
 
-    i += 1
-
     histories.append(history)
 
-    del val_predictions, test_predictions, testDf
+    del test_predictions, testDf
     gc.collect()
 
     K.clear_session()

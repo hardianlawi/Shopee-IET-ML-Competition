@@ -212,7 +212,7 @@ for train, val in skf.split(X, y):
     val_predictions = model.predict(Xval, verbose=1)
     valDf = pd.concat([
         valDf,
-        pd.DataFrame(np.vstack([val_predictions, y[val, :]]), index=val, columns=["f"+str(x) for x in range(n_classes)] + ["category_id"])])
+        pd.DataFrame(np.hstack([val_predictions, y[val, :]]), index=val, columns=["f"+str(x) for x in range(n_classes)] + ["category_id"])])
 
     del Xval, yval
     gc.collect()

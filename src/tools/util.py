@@ -77,12 +77,11 @@ def load_model(model_type, input_shape, n_classes=None, include_top=True, stack_
     else:
 
         x = base_model.output
-        # x = flatten_fn(x)
 
         if stack_new_layers:
 
             x = AveragePooling2D(pool_size=(8, 8))(x)
-            x = Dropout(.4)(x)
+            x = Dropout(.5)(x)
             x = Flatten()(x)
             x = Dense(n_classes, activation="softmax", W_regularizer=l2(.0005), name="predictions")(x)
 
@@ -124,9 +123,9 @@ def scheduler(epoch):
         return 0.01
     elif epoch < 20:
         return 0.001
-    elif epoch < 40:
+    elif epoch < 30:
         return 0.0004
-    elif epoch < 60:
+    elif epoch < 40:
         return 0.00008
     else:
         return 0.000009
