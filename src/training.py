@@ -19,11 +19,11 @@ np.random.seed(2018)
 K.clear_session()
 
 # Model to use
-model_type = "InceptionV3"
-include_top = False
+model_type = "ResNet50"
+include_top = True
 stack_new_layers = True
 data_augmentation = True
-input_shape = (299, 299, 3)
+input_shape = (224, 224, 3)
 dropout_rate = 0.5
 
 # Filepaths
@@ -31,6 +31,14 @@ output_dir = "../outputs"
 logs_dir = "../logs"
 dataset = "../data/mapTrain.csv"
 testDataset = "../data/mapTest.csv"
+
+# dataset is a csv file of format below:
+# file,category,category_id
+# ../train/Baby/Baby_001.jpg,Baby,1
+
+# testDataset is a csv file of format below:
+# id,file
+# 1, ../test/Test_001.jpg
 
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
@@ -54,11 +62,11 @@ if not os.path.isdir(model_dir) or not os.path.exists(model_dir):
 # Training Config
 n_splits = 7  # No of split for skfold cross validation
 batch_size = 64  # No of samples fit every step
-epochs = 100  # No of epochs
+epochs = 50  # No of epochs
 lr = 0.01  # Optimizer learning rate
 
 # Read pre-generated dataset comprising of 3 columns (file, species, species_id)
-df = pd.read_csv(dataset).sample(frac=1.0, random_state=2018)
+df = pd.read_csv(dataset).sample(frac=1, random_state=2018)
 tDf = pd.read_csv(testDataset)
 
 # number of classes
@@ -127,6 +135,7 @@ for train, val in skf.split(X, y):
     )
 
     lr_reducer = ReduceLROnPlateau(
+        monitor="val_acc",
         factor=np.sqrt(0.1),
         cooldown=0,
         patience=2,
@@ -196,16 +205,24 @@ for train, val in skf.split(X, y):
             callbacks=callbacks
         )
 
+    del Xtrain, ytrain
+    gc.collect()
+
     # Generate second-level data
-    val_predictions = model.predict(Xval)
-    valDf = pd.concat([valDf, pd.DataFrame(val_predictions, index=val, columns=["f"+str(x) for x in range(n_classes)])])
+    val_predictions = model.predict(Xval, verbose=1)
+    valDf = pd.concat([
+        valDf,
+        pd.DataFrame(np.vstack([val_predictions, y[val, :]]), index=val, columns=["f"+str(x) for x in range(n_classes)] + ["category_id"])])
+
+    del Xval, yval
+    gc.collect()
 
     # Generate prediction on test data for ensembling
-    test_predictions = model.predict(Xtest)
+    test_predictions = model.predict(Xtest, verbose=1)
     testDf = pd.DataFrame({"id": tDf["id"]})
     testDf = pd.concat([testDf, pd.DataFrame(test_predictions, columns=["f"+str(x) for x in range(n_classes)])], axis=1)
     testDf.to_csv(
-        os.path.join(output_dir, "%s_test_iter%d.csv" % (model_type, i)),
+        os.path.join(test_dir, "%s_test_iter%d.csv" % (model_type, i)),
         index=False
     )
 
@@ -213,9 +230,12 @@ for train, val in skf.split(X, y):
 
     histories.append(history)
 
+    del val_predictions, test_predictions, testDf
+    gc.collect()
+
     K.clear_session()
 
-valDf.to_csv("%s_val.csv" % model_type)
+valDf.to_csv(os.path.join(val_dir, "%s_val.csv" % model_type))
 
 with open(os.path.join(logs_dir, "logs.json"), "w") as f:
     json.dump(histories)

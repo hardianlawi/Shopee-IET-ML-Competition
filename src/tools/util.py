@@ -120,9 +120,9 @@ class LearningRateTracker(Callback):
 
 
 def scheduler(epoch):
-    if epoch < 15:
+    if epoch < 10:
         return 0.01
-    elif epoch < 28:
+    elif epoch < 20:
         return 0.001
     elif epoch < 40:
         return 0.0004
