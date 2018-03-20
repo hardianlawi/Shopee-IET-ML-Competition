@@ -1,8 +1,10 @@
 import numpy as np
+import pandas as pd
+import xgboost as xgb
 import keras.backend as K
 from keras.callbacks import Callback
 from keras.models import Model
-from keras.layers import Dense, Flatten, Dropout, AveragePooling2D
+from keras.layers import Input, Dense, Flatten, Dropout, AveragePooling2D
 from keras.regularizers import l2
 from keras.preprocessing.image import load_img, img_to_array
 from keras.utils import multi_gpu_model
@@ -58,7 +60,7 @@ def load_model(model_type, input_shape, n_classes=None, include_top=True, stack_
     elif model_type == "VGG16":
         base_model = vgg16.VGG16(weights="imagenet", include_top=include_top, input_shape=input_shape)
     elif model_type == "InceptionResNetV2":
-        base_model = inception_resnet_v2.InceptionResnetV2(weights="imagenet", include_top=include_top, input_shape=input_shape)
+        base_model = inception_resnet_v2.InceptionResNetV2(weights="imagenet", include_top=include_top, input_shape=input_shape)
     elif model_type == "ResNet50":
         base_model = resnet50.ResNet50(weights="imagenet", include_top=include_top, input_shape=input_shape)
     elif model_type == "Xception":
@@ -129,3 +131,45 @@ def scheduler(epoch):
         return 0.00008
     else:
         return 0.000009
+
+
+def generate_data(filepaths, ylabel=None, mode="train"):
+
+    if mode == "train":
+
+        final_df = pd.read_csv(filepaths[0]).drop(ylabel, axis=1)
+        for filepath in filepaths[1:]:
+            df = pd.read_csv(filepath)
+            final_df = pd.concat([
+                final_df,
+                df.drop(ylabel, axis=1)
+            ], axis=1)
+        final_df[ylabel] = df[ylabel]
+
+    else:
+
+        final_df = pd.read_csv(filepaths[0])
+        for filepath in filepaths[1:]:
+            df = pd.read_csv(filepath)
+            final_df = pd.concat([
+                final_df,
+                df.drop("id", axis=1)
+            ], axis=1)
+
+    return final_df
+
+
+def NNModel(num_features, n_classes):
+
+    # This returns a tensor
+    inputs = Input(shape=(num_features,))
+
+    # a layer instance is callable on a tensor, and returns a tensor
+    x = Dense(16, activation='relu')(inputs)
+    x = Dense(16, activation='relu')(x)
+
+    predictions = Dense(n_classes, activation='softmax')(x)
+
+    model = Model(inputs=inputs, W_regularizer=l2(.0005), outputs=predictions)
+
+    return model

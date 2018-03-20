@@ -1,6 +1,5 @@
 import gc
 import os
-import json
 import numpy as np
 import pandas as pd
 
@@ -17,8 +16,8 @@ np.random.seed(2018)
 K.clear_session()
 
 # Model to use
-model_type = "InceptionV3"
-include_top = False
+model_type = "InceptionResNetV2"
+include_top = True
 stack_new_layers = True
 input_shape = (299, 299)
 dropout_rate = 0.5
@@ -59,7 +58,7 @@ if not os.path.isdir(model_dir) or not os.path.exists(model_dir):
 
 # Training Config
 n_splits = 7  # No of split for skfold cross validation
-batch_size = 64  # No of samples fit every step
+batch_size = 32  # No of samples fit every step
 epochs = 50  # No of epochs
 lr = 0.01  # Optimizer learning rate
 
@@ -86,7 +85,7 @@ gc.collect()
 print("Start cross-validation training...")
 histories = []
 valDf = pd.DataFrame()
-for iteration in range(1, n_splits):
+for iteration in range(n_splits):
 
     # Define model name
     model_name = '%s_model_{epoch:03d}_{val_acc:.2f}_iter%d.h5' % (model_type, iteration)
@@ -183,7 +182,7 @@ for iteration in range(1, n_splits):
         validation_data=train_val_generator,
         epochs=epochs,
         verbose=1,
-        workers=16,
+        workers=8,
         callbacks=callbacks,
     )
 
@@ -217,7 +216,7 @@ for iteration in range(1, n_splits):
     print("Generating prediction on test data...")
     test_predictions = model.predict(Xtest, verbose=1)
     testDf = pd.DataFrame({"id": tDf["id"]})
-    testDf = pd.concat([testDf, pd.DataFrame(test_predictions, columns=["f"+str(x) for x in range(n_classes)])], axis=1)
+    testDf = pd.concat([testDf, pd.DataFrame(test_predictions, columns=[model_type+"_f"+str(x) for x in range(n_classes)])], axis=1)
     testDf.to_csv(
         os.path.join(test_dir, "%s_test_iter%d.csv" % (model_type, iteration)),
         index=False
@@ -230,7 +229,4 @@ for iteration in range(1, n_splits):
 
     K.clear_session()
 
-valDf.to_csv(os.path.join(val_dir, "%s_val.csv" % model_type))
-
-with open(os.path.join(logs_dir, "logs.json"), "w") as f:
-    json.dump(histories)
+valDf.to_csv(os.path.join(val_dir, "%s_val.csv" % model_type), index=False)
