@@ -14,7 +14,8 @@ from keras.applications import (
     inception_v3,
     resnet50,
     inception_resnet_v2,
-    xception
+    xception,
+    densenet,
 )
 
 
@@ -47,6 +48,8 @@ def load_preprocess_input(model_type):
         preprocess_input = resnet50.preprocess_input
     elif model_type == "Xception":
         preprocess_input = xception.preprocess_input
+    elif "DenseNet" in model_type:
+        preprocess_input = densenet.preprocess_input
     else:
         preprocess_input = inception_v3.preprocess_input
 
@@ -65,6 +68,12 @@ def load_model(model_type, input_shape, n_classes=None, include_top=True, stack_
         base_model = resnet50.ResNet50(weights="imagenet", include_top=include_top, input_shape=input_shape)
     elif model_type == "Xception":
         base_model = xception.Xception(weights="imagenet", include_top=include_top, input_shape=input_shape)
+    elif "DenseNet121" in model_type:
+        base_model = densenet.DenseNet121(weights="imagenet", include_top=include_top, input_shape=input_shape)
+    elif "DenseNet169" in model_type:
+        base_model = densenet.DenseNet169(weights="imagenet", include_top=include_top, input_shape=input_shape)
+    elif "DenseNet201" in model_type:
+        base_model = densenet.DenseNet201(weights="imagenet", include_top=include_top, input_shape=input_shape)
     else:
         base_model = inception_v3.InceptionV3(weights="imagenet", include_top=include_top, input_shape=input_shape)
 

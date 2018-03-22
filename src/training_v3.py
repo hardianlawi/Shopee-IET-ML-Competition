@@ -16,18 +16,18 @@ np.random.seed(2018)
 K.clear_session()
 
 # Model to use
-model_type = "InceptionResNetV2"
+model_type = "ResNet50"
 include_top = True
 stack_new_layers = True
-input_shape = (299, 299)
+input_shape = (224, 224)
 dropout_rate = 0.5
 n_classes = 18
 
 # Filepaths
 output_dir = "../outputs"
 logs_dir = "../logs"
-train_val_dir = "../data/train_val"
-testDataset = "../data/mapTest.csv"
+train_val_dir = "../data/train_val_v1"
+testDataset = "../meta/mapTest.csv"
 
 # dataset is a csv file of format below:
 # file,category,category_id
