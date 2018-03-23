@@ -3,13 +3,14 @@ import os
 import numpy as np
 import pandas as pd
 
+import tensorflow as tf
 import keras.backend as K
 
 from keras import optimizers
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, CSVLogger, EarlyStopping, LearningRateScheduler
 
-from tools.util import load_model, load_images, load_preprocess_input, scheduler, LearningRateTracker
+from tools.util import load_model, load_images, load_preprocess_input, scheduler, LearningRateTracker, ModelMGPU
 
 
 np.random.seed(2018)
@@ -22,6 +23,7 @@ stack_new_layers = True
 input_shape = (331, 331)
 dropout_rate = 0.5
 n_classes = 18
+no_of_gpus = 2
 
 # Filepaths
 output_dir = "../outputs"
@@ -92,20 +94,24 @@ for iteration in range(n_splits):
     filepath = os.path.join(model_dir, model_name)
 
     # Load model
-    model = load_model(
-        model_type,
-        input_shape=input_shape + (3,),
-        n_classes=n_classes,
-        include_top=include_top,
-        stack_new_layers=stack_new_layers,
-        dropout_rate=dropout_rate
-    )
+    with tf.device("/cpu:0"):
+        model = load_model(
+            model_type,
+            input_shape=input_shape + (3,),
+            n_classes=n_classes,
+            include_top=include_top,
+            stack_new_layers=stack_new_layers,
+            dropout_rate=dropout_rate
+        )
 
     # Define optimizer
     sgd = optimizers.SGD(lr=lr, decay=1e-6, momentum=0.9)
 
+    # Parallelize model
+    parallel_model = ModelMGPU(model, gpus=no_of_gpus)
+
     # compile the model
-    model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=["accuracy"])
+    parallel_model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=["accuracy"])
 
     # Prepare callbacks
     checkpoint = ModelCheckpoint(
@@ -177,7 +183,7 @@ for iteration in range(n_splits):
         seed=2018
     )
 
-    history = model.fit_generator(
+    history = parallel_model.fit_generator(
         generator=train_generator,
         validation_data=train_val_generator,
         epochs=epochs,
@@ -197,7 +203,7 @@ for iteration in range(n_splits):
     # Generate second-level data
     print("Generating second-level data...")
     for Xval, label in val_generator:
-        val_predictions = model.predict(Xval, verbose=1)
+        val_predictions = parallel_model.predict(Xval, verbose=1)
         valDf = pd.concat([
             valDf,
             pd.DataFrame(
@@ -214,7 +220,7 @@ for iteration in range(n_splits):
 
     # Generate prediction on test data for ensembling
     print("Generating prediction on test data...")
-    test_predictions = model.predict(Xtest, verbose=1)
+    test_predictions = parallel_model.predict(Xtest, verbose=1)
     testDf = pd.DataFrame({"id": tDf["id"]})
     testDf = pd.concat([testDf, pd.DataFrame(test_predictions, columns=[model_type+"_f"+str(x) for x in range(n_classes)])], axis=1)
     testDf.to_csv(
