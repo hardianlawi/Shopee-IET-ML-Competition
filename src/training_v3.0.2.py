@@ -16,17 +16,17 @@ np.random.seed(2018)
 K.clear_session()
 
 # Model to use
-model_type = "NASNetLarge"
+model_type = "DenseNet169"
 include_top = True
 stack_new_layers = True
-input_shape = (331, 331)
+input_shape = (224, 224)
 dropout_rate = 0.5
 n_classes = 18
 
 # Filepaths
 output_dir = "../outputs"
 logs_dir = "../logs"
-train_val_dir = "../data/train_val_v1"
+train_val_dir = "../data/train_val_v2"
 testDataset = "../meta/mapTest.csv"
 
 # dataset is a csv file of format below:
@@ -43,24 +43,24 @@ if not os.path.exists(logs_dir):
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
-val_dir = os.path.join(output_dir, "val")
+val_dir = os.path.join(output_dir, "val_v2")
 
 if not os.path.exists(val_dir):
     os.makedirs(val_dir)
 
-test_dir = os.path.join(output_dir, "test")
+test_dir = os.path.join(output_dir, "test_v2")
 
 if not os.path.exists(test_dir):
     os.makedirs(test_dir)
 
 # Prepare model saving directory.
-model_dir = os.path.join(output_dir, 'saved_models')
+model_dir = os.path.join(output_dir, 'saved_models_v2')
 
 if not os.path.isdir(model_dir) or not os.path.exists(model_dir):
     os.makedirs(model_dir)
 
 # Training Config
-n_splits = 7  # No of split for skfold cross validation
+n_splits = 10  # No of split for skfold cross validation
 batch_size = 32  # No of samples fit every step
 epochs = 50  # No of epochs
 lr = 0.005  # Optimizer learning rate

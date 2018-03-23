@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import xgboost as xgb
 import keras.backend as K
 from keras.callbacks import Callback
 from keras.models import Model
@@ -16,6 +15,7 @@ from keras.applications import (
     inception_resnet_v2,
     xception,
     densenet,
+    nasnet
 )
 
 
@@ -50,6 +50,8 @@ def load_preprocess_input(model_type):
         preprocess_input = xception.preprocess_input
     elif "DenseNet" in model_type:
         preprocess_input = densenet.preprocess_input
+    elif "NASNet" in model_type:
+        preprocess_input = nasnet.preprocess_input
     else:
         preprocess_input = inception_v3.preprocess_input
 
@@ -68,12 +70,16 @@ def load_model(model_type, input_shape, n_classes=None, include_top=True, stack_
         base_model = resnet50.ResNet50(weights="imagenet", include_top=include_top, input_shape=input_shape)
     elif model_type == "Xception":
         base_model = xception.Xception(weights="imagenet", include_top=include_top, input_shape=input_shape)
-    elif "DenseNet121" in model_type:
+    elif model_type == "DenseNet121":
         base_model = densenet.DenseNet121(weights="imagenet", include_top=include_top, input_shape=input_shape)
-    elif "DenseNet169" in model_type:
+    elif model_type == "DenseNet169":
         base_model = densenet.DenseNet169(weights="imagenet", include_top=include_top, input_shape=input_shape)
-    elif "DenseNet201" in model_type:
+    elif model_type == "DenseNet201":
         base_model = densenet.DenseNet201(weights="imagenet", include_top=include_top, input_shape=input_shape)
+    elif model_type == "NASNetLarge":
+        base_model = nasnet.NASNetLarge(weights="imagenet", include_top=include_top, input_shape=input_shape)
+    elif model_type == "NASNetMobile":
+        base_model = nasnet.NASNetMobile(weights="imagenet", include_top=include_top, input_shape=input_shape)
     else:
         base_model = inception_v3.InceptionV3(weights="imagenet", include_top=include_top, input_shape=input_shape)
 
@@ -131,7 +137,7 @@ class LearningRateTracker(Callback):
 
 def scheduler(epoch):
     if epoch < 10:
-        return 0.01
+        return 0.005
     elif epoch < 20:
         return 0.001
     elif epoch < 30:
