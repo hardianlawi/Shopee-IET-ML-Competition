@@ -84,7 +84,6 @@ for modeltype, models in all_models.items():
             if y == None:
                 X = preds
                 y = [fname[5:-5] for fname in ynow]
-                print(y)
             else:
                 X = np.append(X, preds, axis=0)
                 y.extend([fname[5:-5] for fname in ynow])
