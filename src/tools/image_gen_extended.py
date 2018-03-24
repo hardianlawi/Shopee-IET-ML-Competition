@@ -771,7 +771,8 @@ class DirectoryIterator(Iterator):
         self.image_reader = image_reader
         if self.image_reader == 'pil':
             self.image_reader = pil_image_reader
-        self.reader_config = reader_config
+        from copy import deepcopy
+        self.reader_config = deepcopy(reader_config)
         # TODO: move color_mode and target_size to reader_config
         if color_mode == 'rgb':
             self.reader_config['target_mode'] = 'RGB'
@@ -819,7 +820,6 @@ class DirectoryIterator(Iterator):
                         break
                 if is_valid:
                     self.nb_sample += 1
-        print('Found %d images belonging to %d classes.' % (self.nb_sample, self.nb_class))
 
         # second, build an index of the images in the different class subfolders
         self.filenames = []
@@ -854,6 +854,7 @@ class DirectoryIterator(Iterator):
             self.index_generator = self._flow_index(self.N, 1 , self.shuffle, seed)
         else:
             self._reader_generator_mode = False
+        self.rng = np.random.RandomState(seed)
 
     def __add__(self, it):
         if isinstance(it, DirectoryIterator):
@@ -907,7 +908,7 @@ class DirectoryIterator(Iterator):
                 x = self.image_reader(os.path.join(self.directory, fname), **self.reader_config)
                 if x.ndim == 2:
                     x = np.expand_dims(x, axis=0)
-                x = self.image_data_generator.process(x)
+                x = self.image_data_generator.process(x, self.rng)
                 if i == 0:
                     batch_x = np.zeros((current_batch_size,) + x.shape)
                 batch_x[i] = x
