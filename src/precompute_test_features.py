@@ -83,10 +83,10 @@ for modeltype, models in all_models.items():
             
             if y == None:
                 X = preds
-                y = [fname[5:-5] for fname in ynow]
+                y = [int(fname[5:-4]) for fname in ynow]
             else:
                 X = np.append(X, preds, axis=0)
-                y.extend([fname[5:-5] for fname in ynow])
+                y.extend([int(fname[5:-4]) for fname in ynow])
 
             if X.shape[0] >= 16111:
                 break
