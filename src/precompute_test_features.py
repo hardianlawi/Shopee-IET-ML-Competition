@@ -74,20 +74,19 @@ for modeltype, models in all_models.items():
             batch_size=batch_size,
         )
 
-        X, y = None, None
+        X, y = None, []
         for Xnow in generator:
-            start = (generator.batch_index - 1) * generator.batch_size
+            start = len(y)
             ynow = generator.filenames[start:start+generator.batch_size]
 
             preds = model.predict(Xnow, verbose=1)
             
-            if y == None:
+            if len(y) == 0:
                 X = preds
-                y = [int(fname[5:-4]) for fname in ynow]
             else:
                 X = np.append(X, preds, axis=0)
-                y.extend([int(fname[5:-4]) for fname in ynow])
 
+            y.extend([int(fname[5:-4]) for fname in ynow])
             if X.shape[0] >= 16111:
                 break
 
