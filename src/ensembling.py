@@ -1,89 +1,73 @@
+import glob
+import numpy as np
 import xgboost as xgb
-from sklearn.model_selection import StratifiedKFold
-from keras.optimizers import SGD
-from keras.callbacks import ReduceLROnPlateau, EarlyStopping, LearningRateScheduler
-from tools.util import generate_data, NNModel, LearningRateTracker, scheduler
+from sklearn.model_selection import KFold
+from sklearn.metrics import accuracy_score
+from tools.util import generate_data
 
+save_to = "../outputs/submissions/xgb_ensemble.csv"
 
-train_files = [
-    "../outputs/val/InceptionV3_val.csv",
-    "../outputs/val/Xception_val.csv",
-]
+train_files = []
+for path in glob.glob("../outputs/val/v2/*"):
+    train_files.append(path)
 
-test_files = [
-    "../outputs/test/InceptionV3_test.csv",
-    "../outputs/test/Xception_test.csv",
-]
+# train_files = [
+#     "../outputs/val/InceptionV3_val.csv",
+#     "../outputs/val/Xception_val.csv",
+# ]
 
+test_files = []
+for path in glob.glob("../outputs/test/avg/v2/*"):
+    test_files.append(path)
+
+# test_files = [
+#     "../outputs/test/InceptionV3_test.csv",
+#     "../outputs/test/Xception_test.csv",
+# ]
 
 n_splits = 7
 
-
-train = generate_data(train_files, ylabel="category_id")
+train = generate_data(train_files, label="category_id")
 test = generate_data(test_files, mode="test")
 
 params = {
-    'subsample': 0.8, 'colsample_bytree': 0.5, 'colsample_bylevel': 0.8,
-    'gamma': 0, 'min_child_weight': 1, 'reg_alpha': 0, 'reg_lambda': 1,
-    'max_depth': 4, 'learning_rate': 0.05, 'objective': 'multi:softmax',
-    'seed': 0, 'eval_metric': ['merror'], "num_class": 18
+    'subsample': 1.0, 'colsample_bytree': 0.5, 'colsample_bylevel': 0.8,
+    'gamma': 0.1, 'min_child_weight': 2, 'reg_alpha': 0, 'reg_lambda': 1,
+    'max_depth': 5, 'learning_rate': 0.001, 'objective': 'multi:softmax',
+    'seed': 0, 'eval_metric': ['merror'], "num_class": 18, "silent": 1
 }
 
 X = train.drop("category_id", axis=1)
 y = train.category_id
 
-sgd = SGD(lr=0.5, decay=1e-6, momentum=0.9)
-model = NNModel(X.shape[1], 18)
-model.compile(sgd, "categorical_crossentropy", metrics=["accuracy"])
+kf = KFold(n_splits=n_splits)
+accs = []
+for i, (train, val) in enumerate(kf.split(X, y)):
+    dtrain = xgb.DMatrix(X.iloc[train].as_matrix(), label=y[train])
+    clf = xgb.train(params, dtrain, num_boost_round=100, verbose_eval=False)
+    dtest = xgb.DMatrix(X.iloc[val].as_matrix(), label=y[val])
+    ypreds = clf.predict(dtest)
+    accs.append(accuracy_score(y[val], ypreds))
+    print("Accuracy iter %d:" % i, accuracy_score(y[val], ypreds), train, val)
 
-skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=2018)
-for train, val in skf.split(X, y):
-    Xtrain = X[train, :]
-    ytrain = y[train, :]
-    Xval = X[val, :]
-    yval = y[val, :]
+print("Average accuracy:", np.mean(accs))
+# dtrain = xgb.DMatrix(X.as_matrix(), label=y)
+# res = xgb.cv(
+#     params,
+#     dtrain,
+#     num_boost_round=100,
+#     nfold=n_splits,
+#     seed=2018,
+#     stratified=True,
+#     early_stopping_rounds=10
+# )
 
-    # Prepare callbacks
-    lr_reducer = ReduceLROnPlateau(
-        monitor="val_acc",
-        factor=0.2,
-        cooldown=0,
-        patience=1,
-        min_lr=0.5e-6
-    )
-
-    early_stopping = EarlyStopping(
-        monitor='val_acc',
-        min_delta=0,
-        patience=4,
-        verbose=0,
-        mode='auto'
-    )
-
-    lr_scheduler = LearningRateScheduler(scheduler)
-
-    lr_tracker = LearningRateTracker()
-
-    callbacks = [lr_reducer, early_stopping, lr_scheduler, lr_tracker]
-
-    history = model.fit(x=Xtrain, y=ytrain, batch_size=64, epochs=50)
-
-
-dtrain = xgb.DMatrix(X, label=y)
-res = xgb.cv(
-    params,
-    dtrain,
-    num_boost_round=100,
-    nfold=n_splits,
-    seed=2018,
-    stratified=True,
-    early_stopping_rounds=10)
-
-clf = xgb.train(params, dtrain, num_boost_round=42, verbose_eval=True)
+clf = xgb.train(params, dtrain, num_boost_round=100, verbose_eval=False)
 
 Xtest = test.drop("id", axis=1)
-dtest = xgb.DMatrix(test.drop("id", axis=1))
+dtest = xgb.DMatrix(test.drop("id", axis=1).as_matrix())
 ypreds = clf.predict(dtest)
 
 submission_df = test[["id"]]
 submission_df["category"] = ypreds.astype(int)
+submission_df.to_csv(save_to, index=False)

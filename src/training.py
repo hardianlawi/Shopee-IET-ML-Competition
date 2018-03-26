@@ -1,6 +1,5 @@
 import gc
 import os
-import json
 import numpy as np
 import pandas as pd
 
@@ -236,6 +235,3 @@ for train, val in skf.split(X, y):
     K.clear_session()
 
 valDf.to_csv(os.path.join(val_dir, "%s_val.csv" % model_type))
-
-with open(os.path.join(logs_dir, "logs.json"), "w") as f:
-    json.dump(histories)

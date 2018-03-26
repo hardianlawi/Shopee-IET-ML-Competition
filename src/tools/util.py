@@ -148,18 +148,21 @@ def scheduler(epoch):
         return 0.000009
 
 
-def generate_data(filepaths, ylabel=None, mode="train"):
+def generate_data(filepaths, label=None, mode="train"):
 
     if mode == "train":
 
-        final_df = pd.read_csv(filepaths[0]).drop(ylabel, axis=1)
+        final_df = pd.read_csv(filepaths[0])
+        ylabel = final_df[label]
+        final_df.drop(label, inplace=True, axis=1)
         for filepath in filepaths[1:]:
             df = pd.read_csv(filepath)
+            assert (df[label] == ylabel).all()
             final_df = pd.concat([
                 final_df,
-                df.drop(ylabel, axis=1)
+                df.drop(label, axis=1)
             ], axis=1)
-        final_df[ylabel] = df[ylabel]
+        final_df[label] = df[label]
 
     else:
 

@@ -1,3 +1,8 @@
+"""
+Generator + Multi GPU
+"""
+
+
 import gc
 import os
 import numpy as np
@@ -17,10 +22,10 @@ np.random.seed(2018)
 K.clear_session()
 
 # Model to use
-model_type = "NASNetLarge"
+model_type = "NASNetMobile"
 include_top = True
 stack_new_layers = True
-input_shape = (331, 331)
+input_shape = (224, 224)
 dropout_rate = 0.5
 n_classes = 18
 no_of_gpus = 2

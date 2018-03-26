@@ -1,3 +1,8 @@
+"""
+Generator with 10 splits
+"""
+
+
 import gc
 import os
 import numpy as np
