@@ -16,15 +16,12 @@ import threading
 import copy
 import inspect
 import types
-
 import keras.backend as K
-# from .. import backend as K
-from keras.utils.generic_utils import Progbar
 
 
 def random_rotation(x, rg, row_index=1, col_index=2, channel_index=0,
-                    fill_mode='nearest', cval=0.):
-    theta = np.pi / 180 * np.random.uniform(-rg, rg)
+                    fill_mode='nearest', cval=0., rng=None):
+    theta = np.pi / 180 * rng.uniform(-rg, rg)
     rotation_matrix = np.array([[np.cos(theta), -np.sin(theta), 0],
                                 [np.sin(theta), np.cos(theta), 0],
                                 [0, 0, 1]])
@@ -36,10 +33,10 @@ def random_rotation(x, rg, row_index=1, col_index=2, channel_index=0,
 
 
 def random_shift(x, wrg, hrg, row_index=1, col_index=2, channel_index=0,
-                 fill_mode='nearest', cval=0.):
+                 fill_mode='nearest', cval=0., rng=None):
     h, w = x.shape[row_index], x.shape[col_index]
-    tx = np.random.uniform(-hrg, hrg) * h
-    ty = np.random.uniform(-wrg, wrg) * w
+    tx = rng.uniform(-hrg, hrg) * h
+    ty = rng.uniform(-wrg, wrg) * w
     translation_matrix = np.array([[1, 0, tx],
                                    [0, 1, ty],
                                    [0, 0, 1]])
@@ -50,8 +47,8 @@ def random_shift(x, wrg, hrg, row_index=1, col_index=2, channel_index=0,
 
 
 def random_shear(x, intensity, row_index=1, col_index=2, channel_index=0,
-                 fill_mode='nearest', cval=0.):
-    shear = np.random.uniform(-intensity, intensity)
+                 fill_mode='nearest', cval=0., rng=None):
+    shear = rng.uniform(-intensity, intensity)
     shear_matrix = np.array([[1, -np.sin(shear), 0],
                              [0, np.cos(shear), 0],
                              [0, 0, 1]])
@@ -63,7 +60,7 @@ def random_shear(x, intensity, row_index=1, col_index=2, channel_index=0,
 
 
 def random_zoom(x, zoom_range, row_index=1, col_index=2, channel_index=0,
-                fill_mode='nearest', cval=0.):
+                fill_mode='nearest', cval=0., rng=None):
     if len(zoom_range) != 2:
         raise Exception('zoom_range should be a tuple or list of two floats. '
                         'Received arg: ', zoom_range)
@@ -71,7 +68,7 @@ def random_zoom(x, zoom_range, row_index=1, col_index=2, channel_index=0,
     if zoom_range[0] == 1 and zoom_range[1] == 1:
         zx, zy = 1, 1
     else:
-        zx, zy = np.random.uniform(zoom_range[0], zoom_range[1], 2)
+        zx, zy = rng.uniform(zoom_range[0], zoom_range[1], 2)
     zoom_matrix = np.array([[zx, 0, 0],
                             [0, zy, 0],
                             [0, 0, 1]])
@@ -87,10 +84,10 @@ def random_barrel_transform(x, intensity):
     pass
 
 
-def random_channel_shift(x, intensity, channel_index=0):
+def random_channel_shift(x, intensity, channel_index=0, rng=None):
     x = np.rollaxis(x, channel_index, 0)
     min_x, max_x = np.min(x), np.max(x)
-    channel_images = [np.clip(x_channel + np.random.uniform(-intensity, intensity), min_x, max_x)
+    channel_images = [np.clip(x_channel + rng.uniform(-intensity, intensity), min_x, max_x)
                       for x_channel in x]
     x = np.stack(channel_images, axis=0)
     x = np.rollaxis(x, 0, channel_index+1)
@@ -213,8 +210,8 @@ def standardize(x,
             # add data to _X array
             config['_X'][config['_iX']] = x
             config['_iX'] += 1
-            if verbose and '_fit_progressbar' in config:
-                config['_fit_progressbar'].update(config['_iX'], force=(config['_iX'] == fitting))
+            # if verbose and config.has_key('_fit_progressbar'):
+            #     config['_fit_progressbar'].update(config['_iX'], force=(config['_iX']==fitting))
 
             # the array (_X) is ready to fit
             if config['_iX'] >= fitting:
@@ -250,8 +247,8 @@ def standardize(x,
             config['_iX'] = 0
             config['_X'][config['_iX']] = x
             config['_iX'] += 1
-            if verbose:
-                config['_fit_progressbar'] = Progbar(target=fitting, verbose=verbose)
+            # if verbose:
+            #     config['_fit_progressbar'] = Progbar(target=fitting, verbose=verbose)
         return x
 
     if rescale:
@@ -288,28 +285,28 @@ def standardize(x,
             flatx = np.reshape(x, (x.size))
             whitex = np.dot(flatx, principal_components)
             x = np.reshape(whitex, (x.shape[0], x.shape[1], x.shape[2]))
-
     return x
 
 
 def center_crop(x, center_crop_size, **kwargs):
-    centerw, centerh = x.shape[1]//2, x.shape[2]//2
+    centerw, centerh = x.shape[0]//2, x.shape[1]//2
     halfw, halfh = center_crop_size[0]//2, center_crop_size[1]//2
-    return x[:, centerw-halfw:centerw+halfw, centerh-halfh:centerh+halfh]
+    return x[centerw-halfw:centerw+halfw, centerh-halfh:centerh+halfh, :]
 
 
-def random_crop(x, random_crop_size, sync_seed=None, **kwargs):
-    np.random.seed(sync_seed)
-    w, h = x.shape[1], x.shape[2]
+def random_crop(x, random_crop_size, sync_seed=None, rng=None, **kwargs):
+    # np.random.seed(sync_seed)
+    w, h = x.shape[0], x.shape[1]
     rangew = (w - random_crop_size[0]) // 2
     rangeh = (h - random_crop_size[1]) // 2
-    offsetw = 0 if rangew == 0 else np.random.randint(rangew)
-    offseth = 0 if rangeh == 0 else np.random.randint(rangeh)
-    return x[:, offsetw:offsetw+random_crop_size[0], offseth:offseth+random_crop_size[1]]
+    # print('w: {}, h: {}, rangew: {}, rangeh: {}'.format(w, h, rangew, rangeh))
+    offsetw = 0 if rangew == 0 else rng.randint(rangew)
+    offseth = 0 if rangeh == 0 else rng.randint(rangeh)
+    return x[offsetw:offsetw+random_crop_size[0], offseth:offseth+random_crop_size[1], :]
 
 
 def random_transform(x,
-                     dim_ordering='th',
+                     dim_ordering='tf',
                      rotation_range=0.,
                      width_shift_range=0.,
                      height_shift_range=0.,
@@ -322,6 +319,7 @@ def random_transform(x,
                      vertical_flip=False,
                      rescale=None,
                      sync_seed=None,
+                     rng=None,
                      **kwargs):
     '''
 
@@ -345,7 +343,7 @@ def random_transform(x,
             otherwise we multiply the data by the value provided (before applying
             any other transformation).
     '''
-    np.random.seed(sync_seed)
+    # rng.seed(sync_seed)
 
     x = x.astype('float32')
     # x is a single image, so it doesn't have image number at index 0
@@ -359,19 +357,19 @@ def random_transform(x,
         img_col_index = 1
     # use composition of homographies to generate final transform that needs to be applied
     if rotation_range:
-        theta = np.pi / 180 * np.random.uniform(-rotation_range, rotation_range)
+        theta = np.pi / 180 * rng.uniform(-rotation_range, rotation_range)
     else:
         theta = 0
     rotation_matrix = np.array([[np.cos(theta), -np.sin(theta), 0],
                                 [np.sin(theta), np.cos(theta), 0],
                                 [0, 0, 1]])
     if height_shift_range:
-        tx = np.random.uniform(-height_shift_range, height_shift_range) * x.shape[img_row_index]
+        tx = rng.uniform(-height_shift_range, height_shift_range) * x.shape[img_row_index]
     else:
         tx = 0
 
     if width_shift_range:
-        ty = np.random.uniform(-width_shift_range, width_shift_range) * x.shape[img_col_index]
+        ty = rng.uniform(-width_shift_range, width_shift_range) * x.shape[img_col_index]
     else:
         ty = 0
 
@@ -379,7 +377,7 @@ def random_transform(x,
                                    [0, 1, ty],
                                    [0, 0, 1]])
     if shear_range:
-        shear = np.random.uniform(-shear_range, shear_range)
+        shear = rng.uniform(-shear_range, shear_range)
     else:
         shear = 0
     shear_matrix = np.array([[1, -np.sin(shear), 0],
@@ -398,7 +396,8 @@ def random_transform(x,
     if zoom_range[0] == 1 and zoom_range[1] == 1:
         zx, zy = 1, 1
     else:
-        zx, zy = np.random.uniform(zoom_range[0], zoom_range[1], 2)
+        zx, zy = rng.uniform(zoom_range[0], zoom_range[1], 2)
+
     zoom_matrix = np.array([[zx, 0, 0],
                             [0, zy, 0],
                             [0, 0, 1]])
@@ -409,22 +408,21 @@ def random_transform(x,
     transform_matrix = transform_matrix_offset_center(transform_matrix, h, w)
     x = apply_transform(x, transform_matrix, img_channel_index,
                         fill_mode=fill_mode, cval=cval)
-
     if channel_shift_range != 0:
-        x = random_channel_shift(x, channel_shift_range, img_channel_index)
+        x = random_channel_shift(x, channel_shift_range, img_channel_index, rng=rng)
 
     if horizontal_flip:
-        if np.random.random() < 0.5:
+        if rng.rand() < 0.5:
             x = flip_axis(x, img_col_index)
 
     if vertical_flip:
-        if np.random.random() < 0.5:
+        if rng.rand() < 0.5:
             x = flip_axis(x, img_row_index)
 
     # TODO:
     # barrel/fisheye
 
-    np.random.seed()
+    # rng.seed()
     return x
 
 
@@ -508,7 +506,7 @@ class ImageDataGenerator(object):
         self.set_pipeline(self.default_pipeline)
 
         self.__fitting = False
-        self.fit_lock = threading.Lock()
+        # self.fit_lock = threading.Lock()
 
     @property
     def sync_seed(self):
@@ -535,26 +533,24 @@ class ImageDataGenerator(object):
             raise Exception('invalid pipeline.')
 
     def flow(self, X, y=None, batch_size=32, shuffle=True, seed=None,
-             save_to_dir=None, save_prefix='', save_mode=None, save_format='jpeg'):
+             save_to_dir=None, save_prefix='', save_mode=None, save_format='jpeg',
+             pool=None):
         return NumpyArrayIterator(
             X, y, self,
             batch_size=batch_size, shuffle=shuffle, seed=seed,
             dim_ordering=self.config['dim_ordering'],
             save_to_dir=save_to_dir, save_prefix=save_prefix,
-            save_mode=save_mode, save_format=save_format)
+            save_mode=save_mode, save_format=save_format,
+            pool=pool)
 
     def flow_from_directory(self, directory,
                             color_mode=None, target_size=None,
-                            image_reader='pil', reader_config=None,
-                            read_formats=None,
+                            image_reader='pil', reader_config={'target_mode': 'RGB', 'target_size': (256, 256)},
+                            read_formats={'png', 'jpg', 'jpeg', 'bmp'},
                             classes=None, class_mode='categorical',
                             batch_size=32, shuffle=True, seed=None,
                             save_to_dir=None, save_prefix='',
                             save_mode=None, save_format='jpeg'):
-        if reader_config is None:
-            reader_config = {'target_mode': 'RGB', 'target_size': (256, 256)}
-        if read_formats is None:
-            read_formats = {'png', 'jpg', 'jpeg', 'bmp'}
         return DirectoryIterator(
             directory, self,
             color_mode=color_mode, target_size=target_size,
@@ -566,14 +562,21 @@ class ImageDataGenerator(object):
             save_to_dir=save_to_dir, save_prefix=save_prefix,
             save_mode=save_mode, save_format=save_format)
 
-    def process(self, x):
+    def process(self, x, rng):
         # get next sync_seed
-        np.random.seed(self.__sync_seed)
-        self.__sync_seed = np.random.randint(0, 4294967295)
-        self.config['fitting'] = self.__fitting
-        self.config['sync_seed'] = self.__sync_seed
+        # np.random.seed(self.__sync_seed)
+        # np.random.seed(int.from_bytes(os.urandom(4), byteorder='little'))
+        # self.__sync_seed = np.random.randint(0, 4294967295)
+        # __sync_seed = rng.randint(0, 4294967295)
+        # # print(self.__sync_seed)
+        # self.config['fitting'] = self.__fitting
+        # try:
+        #     del self.config['sync_seed']
+        # except:
+        #     pass
+        # self.config['sync_seed'] = self.__sync_seed
         for p in self.__pipeline:
-            x = p(x, **self.config)
+            x = p(x, rng=rng, **self.config)
         return x
 
     def fit_generator(self, generator, nb_iter):
@@ -583,13 +586,13 @@ class ImageDataGenerator(object):
             generator: Iterator, generate data for fitting.
             nb_iter: Int, number of iteration to fit.
         '''
-        with self.fit_lock:
-            try:
-                self.__fitting = nb_iter*generator.batch_size
-                for i in range(nb_iter):
-                    next(generator)
-            finally:
-                self.__fitting = False
+        # with self.fit_lock:
+        #     try:
+        #         self.__fitting = nb_iter*generator.batch_size
+        #         for i in range(nb_iter):
+        #             next(generator)
+        #     finally:
+        #         self.__fitting = False
 
     def fit(self, X, rounds=1):
         '''Fit the pipeline on a numpy array
@@ -599,14 +602,14 @@ class ImageDataGenerator(object):
             rounds: how many rounds of fit to do over the data
         '''
         X = np.copy(X)
-        with self.fit_lock:
-            try:
-                self.__fitting = rounds*X.shape[0]
-                for r in range(rounds):
-                    for i in range(X.shape[0]):
-                        self.process(X[i])
-            finally:
-                self.__fitting = False
+        # with self.fit_lock:
+        #     try:
+        #         self.__fitting = rounds*X.shape[0]
+        #         for r in range(rounds):
+        #             for i in range(X.shape[0]):
+        #                 self.process(X[i])
+        #     finally:
+        #         self.__fitting = False
 
 
 class Iterator(object):
@@ -614,8 +617,8 @@ class Iterator(object):
     def __init__(self, N, batch_size, shuffle, seed):
         self.N = N
         self.batch_size = batch_size
-        self.shuffle = shuffle
         self.seed = seed
+        self.shuffle = shuffle
         self.batch_index = 0
         self.total_batches_seen = 0
         self.lock = threading.Lock()
@@ -672,13 +675,20 @@ class Iterator(object):
         return self.next(*args, **kwargs)
 
 
+def process_image_worker(tup):
+    process, img, rng = tup
+    ret = process(img, rng)
+    return ret
+
+
 class NumpyArrayIterator(Iterator):
 
     def __init__(self, X, y, image_data_generator,
                  batch_size=32, shuffle=False, seed=None,
                  dim_ordering=K.image_dim_ordering(),
                  save_to_dir=None, save_prefix='',
-                 save_mode=None, save_format='jpeg'):
+                 save_mode=None, save_format='jpeg',
+                 pool=None):
         if y is not None and len(X) != len(y):
             raise Exception('X (images tensor) and y (labels) '
                             'should have the same length. '
@@ -692,7 +702,18 @@ class NumpyArrayIterator(Iterator):
         self.save_mode = save_mode
         self.save_format = save_format
         seed = seed or image_data_generator.config['seed']
+        self.pool = pool
+        self.rngs = [np.random.RandomState(seed + i) for i in range(batch_size)]
         super(NumpyArrayIterator, self).__init__(X.shape[0], batch_size, shuffle, seed)
+
+    def close(self):
+        pass
+        # print('closing pool!')
+        # self.pool.close()
+        # self.pool.join()
+        # self.pool.terminate()
+        # self.pool = None
+        # print('closed pool!')
 
     def __add__(self, it):
         if isinstance(it, NumpyArrayIterator):
@@ -710,13 +731,25 @@ class NumpyArrayIterator(Iterator):
         with self.lock:
             index_array, current_index, current_batch_size = next(self.index_generator)
         # The transformation of images is not under thread lock so it can be done in parallel
-        batch_x = None
-        for i, j in enumerate(index_array):
-            x = self.X[j]
-            x = self.image_data_generator.process(x)
-            if i == 0:
-                batch_x = np.zeros((current_batch_size,) + x.shape)
-            batch_x[i] = x
+        result = self.pool.map(
+            process_image_worker,
+            ((self.image_data_generator.process, self.X[j], self.rngs[i % self.batch_size]) for i, j in enumerate(index_array))
+        )
+        batch_x = np.array(result)
+
+        for i, rng in enumerate(self.rngs):
+            new_seed = rng.randint(0, 4294967295)
+            self.rngs[i] = np.random.RandomState(new_seed)
+
+        # for i, j in enumerate(index_array):
+        #     # print(i, j)
+        #     x = self.X[j]
+        #     x = self.image_data_generator.process(x)
+        #     if i == 0:
+        #         batch_x = np.zeros((current_batch_size,) + x.shape)
+        #         # print(batch_x.shape)
+        #     batch_x[i] = x
+
         if self.save_to_dir:
             for i in range(current_batch_size):
                 img = array_to_img(batch_x[i], self.dim_ordering, mode=self.save_mode, scale=True)
@@ -735,8 +768,8 @@ class DirectoryIterator(Iterator):
 
     def __init__(self, directory, image_data_generator,
                  color_mode=None, target_size=None,
-                 image_reader="pil", read_formats=None,
-                 reader_config=None,
+                 image_reader="pil", read_formats={'png', 'jpg', 'jpeg', 'bmp'},
+                 reader_config={'target_mode': 'RGB', 'target_size': None},
                  dim_ordering=K.image_dim_ordering,
                  classes=None, class_mode='categorical',
                  batch_size=32, shuffle=True, seed=None,
@@ -747,11 +780,8 @@ class DirectoryIterator(Iterator):
         self.image_reader = image_reader
         if self.image_reader == 'pil':
             self.image_reader = pil_image_reader
-        if read_formats is None:
-            read_formats = {'png', 'jpg', 'jpeg', 'bmp'}
-        if reader_config is None:
-            reader_config = {'target_mode': 'RGB', 'target_size': None}
-        self.reader_config = reader_config
+        from copy import deepcopy
+        self.reader_config = deepcopy(reader_config)
         # TODO: move color_mode and target_size to reader_config
         if color_mode == 'rgb':
             self.reader_config['target_mode'] = 'RGB'
@@ -799,7 +829,6 @@ class DirectoryIterator(Iterator):
                         break
                 if is_valid:
                     self.nb_sample += 1
-        print('Found %d images belonging to %d classes.' % (self.nb_sample, self.nb_class))
 
         # second, build an index of the images in the different class subfolders
         self.filenames = []
@@ -834,6 +863,7 @@ class DirectoryIterator(Iterator):
             self.index_generator = self._flow_index(self.N, 1, self.shuffle, seed)
         else:
             self._reader_generator_mode = False
+        self.rng = np.random.RandomState(seed)
 
     def __add__(self, it):
         if isinstance(it, DirectoryIterator):
@@ -887,7 +917,7 @@ class DirectoryIterator(Iterator):
                 x = self.image_reader(os.path.join(self.directory, fname), **self.reader_config)
                 if x.ndim == 2:
                     x = np.expand_dims(x, axis=0)
-                x = self.image_data_generator.process(x)
+                x = self.image_data_generator.process(x, self.rng)
                 if i == 0:
                     batch_x = np.zeros((current_batch_size,) + x.shape)
                 batch_x[i] = x

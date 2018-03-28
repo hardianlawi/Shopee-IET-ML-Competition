@@ -36,6 +36,17 @@ class ModelMGPU(Model):
         return super(ModelMGPU, self).__getattribute__(attrname)
 
 
+def load_default_input_shape(model_type):
+    if model_type == "VGG19" or model_type == "VGG16" or model_type == "ResNet50" or "NASNetMobile" in model_type or "DenseNet" in model_type:
+        input_shape = (224, 224)
+    elif "NASNetLarge" == model_type:
+        input_shape = (331, 331)
+    else:
+        input_shape = (299, 299)
+
+    return input_shape
+
+
 def load_preprocess_input(model_type):
 
     if model_type == "VGG19":
@@ -137,11 +148,11 @@ class LearningRateTracker(Callback):
 
 def scheduler(epoch):
     if epoch < 10:
-        return 0.005
-    elif epoch < 20:
         return 0.001
+    elif epoch < 20:
+        return 0.0005
     elif epoch < 30:
-        return 0.0004
+        return 0.0001
     elif epoch < 40:
         return 0.00008
     else:
