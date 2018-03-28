@@ -26,6 +26,7 @@ model_type = "InceptionV3"
 include_top = True
 stack_new_layers = True
 input_shape = (299, 299)
+generator_input_shape = (input_shape[0] + 101, input_shape[1] + 101)
 dropout_rate = 0.5
 n_classes = 2
 
@@ -165,11 +166,11 @@ for iteration in range(n_splits):
         rescale=None,
     )
     datagen.config["center_crop_size"] = (299, 299)
-    datagen.set_pipeline([T.center_crop, preprocess_input])
+    datagen.set_pipeline([T.center_crop, lambda x, **kwargs: preprocess_input(x),])
 
     train_generator = datagen.flow_from_directory(
         directory=os.path.join(train_val_dir, "train_val_%d" % iteration, "train"),
-        target_size=input_shape,
+        target_size=generator_input_shape,
         class_mode="categorical",
         batch_size=batch_size,
         seed=2018
@@ -177,7 +178,7 @@ for iteration in range(n_splits):
 
     train_val_generator = datagen.flow_from_directory(
         directory=os.path.join(train_val_dir, "train_val_%d" % iteration, "val"),
-        target_size=input_shape,
+        target_size=generator_input_shape,
         class_mode="categorical",
         batch_size=batch_size,
         seed=2018
@@ -196,7 +197,7 @@ for iteration in range(n_splits):
 
     val_generator = datagen.flow_from_directory(
         directory=os.path.join(train_val_dir, "train_val_%d" % iteration, "val"),
-        target_size=input_shape,
+        target_size=generator_input_shape,
         class_mode="categorical",
         batch_size=100000,
         seed=2018

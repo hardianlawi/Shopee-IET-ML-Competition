@@ -293,9 +293,9 @@ def standardize(x,
 
 
 def center_crop(x, center_crop_size, **kwargs):
-    centerw, centerh = x.shape[1]//2, x.shape[2]//2
+    centerw, centerh = x.shape[0]//2, x.shape[1]//2
     halfw, halfh = center_crop_size[0]//2, center_crop_size[1]//2
-    return x[:, centerw-halfw:centerw+halfw, centerh-halfh:centerh+halfh]
+    return x[centerw-halfw:centerw+halfw+1, centerh-halfh:centerh+halfh+1, :]
 
 
 def random_crop(x, random_crop_size, sync_seed=None, **kwargs):
