@@ -166,7 +166,7 @@ for iteration in range(n_splits):
         rescale=None,
     )
     datagen.config["center_crop_size"] = (299, 299)
-    datagen.set_pipeline([T.center_crop, lambda x, **kwargs: preprocess_input(x),])
+    datagen.set_pipeline([T.center_crop, lambda x, **kwargs: preprocess_input(x), ])
 
     train_generator = datagen.flow_from_directory(
         directory=os.path.join(train_val_dir, "train_val_%d" % iteration, "train"),

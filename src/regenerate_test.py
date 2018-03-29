@@ -22,15 +22,21 @@ n_classes = 18
 tDf = pd.read_csv(testDataset)
 
 input_prev = None
-for model_type in ["DenseNet121", 'DenseNet169', "DenseNet201", "NASNetMobile", "ResNet50", "InceptionResNetV2", "InceptionV3", "Xception", "NASNetLarge"]:
+# "InceptionResNetV2", "InceptionV3", "Xception", "NASNetLarge"
+# "DenseNet121", 'DenseNet169', "DenseNet201", "NASNetMobile", "ResNet50"
+for model_type in ["InceptionV3", "Xception", "NASNetLarge"]:
 
     if model_type == "NASNetLarge":
+        del Xtest, broken_test_imgs
+        gc.collect()
         batch_size = 16
 
     # Load preprocessor based on model_type
     preprocess_input = load_preprocess_input(model_type)
+    print(preprocess_input)
 
     input_shape = load_default_input_shape(model_type)
+    print("Input_shape:", input_shape)
 
     datagen = ImageDataGenerator(
         featurewise_center=False,
@@ -59,9 +65,9 @@ for model_type in ["DenseNet121", 'DenseNet169', "DenseNet201", "NASNetMobile", 
         Xtest, broken_test_imgs = load_images(tDf.file, input_shape=input_shape)
         input_prev = input_shape
 
-    # Convert and process test images
-    Xtest = np.asarray(Xtest)
-    Xtest = preprocess_input(Xtest)
+        # Convert and process test images
+        Xtest = np.asarray(Xtest)
+        Xtest = preprocess_input(Xtest)
 
     valDf = pd.DataFrame()
 
@@ -81,30 +87,30 @@ for model_type in ["DenseNet121", 'DenseNet169', "DenseNet201", "NASNetMobile", 
 
         model = load_model(f)
 
-        print("Generating validation data...")
-        val_generator = datagen.flow_from_directory(
-            directory=os.path.join(train_val_dir, "train_val_%s" % iteration, "val"),
-            target_size=input_shape,
-            class_mode="categorical",
-            batch_size=100000,
-            seed=2018
-        )
+        # print("Generating validation data...")
+        # val_generator = datagen.flow_from_directory(
+        #     directory=os.path.join(train_val_dir, "train_val_%s" % iteration, "val"),
+        #     target_size=input_shape,
+        #     class_mode="categorical",
+        #     batch_size=100000,
+        #     seed=2018
+        # )
+        #
+        # for Xval, label in val_generator:
+        #     val_predictions = model.predict(Xval)
+        #     valDf = pd.concat([
+        #         valDf,
+        #         pd.DataFrame(
+        #             np.hstack([
+        #                 val_predictions,
+        #                 np.argmax(label, axis=-1)[:, np.newaxis]
+        #             ]),
+        #             columns=["f"+str(x) for x in range(n_classes)] + ["category_id"])
+        #     ])
+        #     break
 
-        for Xval, label in val_generator:
-            val_predictions = model.predict(Xval)
-            valDf = pd.concat([
-                valDf,
-                pd.DataFrame(
-                    np.hstack([
-                        val_predictions,
-                        np.argmax(label, axis=-1)[:, np.newaxis]
-                    ]),
-                    columns=["f"+str(x) for x in range(n_classes)] + ["category_id"])
-            ])
-            break
-
-        del Xval, label, val_predictions
-        gc.collect()
+        # del Xval, label, val_predictions
+        # gc.collect()
 
         print("Generating prediction on test data...")
         test_predictions = model.predict(Xtest)
@@ -118,4 +124,4 @@ for model_type in ["DenseNet121", 'DenseNet169', "DenseNet201", "NASNetMobile", 
         del test_predictions, testDf
         gc.collect()
 
-    valDf.to_csv(os.path.join(val_dir, "%s_val.csv" % model_type), index=False)
+    # valDf.to_csv(os.path.join(val_dir, "%s_val.csv" % model_type), index=False)
