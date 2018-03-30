@@ -87,30 +87,30 @@ for model_type in ["InceptionV3", "Xception", "NASNetLarge"]:
 
         model = load_model(f)
 
-        # print("Generating validation data...")
-        # val_generator = datagen.flow_from_directory(
-        #     directory=os.path.join(train_val_dir, "train_val_%s" % iteration, "val"),
-        #     target_size=input_shape,
-        #     class_mode="categorical",
-        #     batch_size=100000,
-        #     seed=2018
-        # )
-        #
-        # for Xval, label in val_generator:
-        #     val_predictions = model.predict(Xval)
-        #     valDf = pd.concat([
-        #         valDf,
-        #         pd.DataFrame(
-        #             np.hstack([
-        #                 val_predictions,
-        #                 np.argmax(label, axis=-1)[:, np.newaxis]
-        #             ]),
-        #             columns=["f"+str(x) for x in range(n_classes)] + ["category_id"])
-        #     ])
-        #     break
+        print("Generating validation data...")
+        val_generator = datagen.flow_from_directory(
+            directory=os.path.join(train_val_dir, "train_val_%s" % iteration, "val"),
+            target_size=input_shape,
+            class_mode="categorical",
+            batch_size=100000,
+            seed=2018
+        )
 
-        # del Xval, label, val_predictions
-        # gc.collect()
+        for Xval, label in val_generator:
+            val_predictions = model.predict(Xval)
+            valDf = pd.concat([
+                valDf,
+                pd.DataFrame(
+                    np.hstack([
+                        val_predictions,
+                        np.argmax(label, axis=-1)[:, np.newaxis]
+                    ]),
+                    columns=["f"+str(x) for x in range(n_classes)] + ["category_id"])
+            ])
+            break
+
+        del Xval, label, val_predictions
+        gc.collect()
 
         print("Generating prediction on test data...")
         test_predictions = model.predict(Xtest)
@@ -124,4 +124,4 @@ for model_type in ["InceptionV3", "Xception", "NASNetLarge"]:
         del test_predictions, testDf
         gc.collect()
 
-    # valDf.to_csv(os.path.join(val_dir, "%s_val.csv" % model_type), index=False)
+    valDf.to_csv(os.path.join(val_dir, "%s_val.csv" % model_type), index=False)
