@@ -16,8 +16,8 @@ First, you have to download the data from [here](https://www.kaggle.com/c/shopee
 
 The notebook contains the analysis done before and after the training.
 
-- `EDA.ipynb`: Exploratory data analysis, the analysis done before training.
-- `ModelAnalysis.ipynb`: Analysis of the error of the models and correlation between models, done after the training.
+- `EDA.ipynb`[https://github.com/hardianlawi/Shopee-IET-ML-Competition/blob/master/EDA.ipynb]: Exploratory data analysis, the analysis done before training.
+- `Model Analysis.ipynb`[https://github.com/hardianlawi/Shopee-IET-ML-Competition/blob/master/Model%20Analysis.ipynb]: Analysis of the error of the models and correlation between models, done after the training.
 
 ### Scripts
 
