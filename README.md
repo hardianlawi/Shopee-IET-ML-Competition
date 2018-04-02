@@ -1,4 +1,4 @@
-# [Shopee-IET-ML-Competition](https://www.kaggle.com/c/shopee-iet-machine-learning-competition)
+# [Shopee-IET-ML-Competition](https://www.kaggle.com/c/shopee-iet-machine-learning-competition) (1st Place)
 
 The aim of the project is to build a model to classify images to 18 categories. The training/test sets are images provided by Shopee, which are classified into 18 categories.
 
