@@ -1,11 +1,18 @@
 import os
+import argparse
 from shutil import copyfile
 from sklearn.model_selection import StratifiedKFold
 
 
-train_dir = "../data/train"
-output_dir = "../data/train_val_v2"
-n_splits = 10
+parser = argparse.ArgumentParser()
+parser.add_argument('--train_dir', default="../data/train")
+parser.add_argument("--output_dir", default="../data/train_val_v1")
+parser.add_argument("--n_splits", default=7, type=int)
+args = parser.parse_args()
+
+train_dir = args.train_dir
+output_dir = args.output_dir
+n_splits = args.n_splits
 
 
 def load_images(train_dir):
@@ -45,6 +52,7 @@ def save_images(dir_path, all_images, images_names, categories, iteration, dtype
 
 all_images_dir, images_names, categories = load_images(train_dir)
 print('loaded')
+
 # Define a splitter
 skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=2018)
 print('defined')

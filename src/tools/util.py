@@ -20,6 +20,7 @@ from keras.applications import (
 
 
 class ModelMGPU(Model):
+
     def __init__(self, ser_model, gpus):
         pmodel = multi_gpu_model(ser_model, gpus)
         self.__dict__.update(pmodel.__dict__)
@@ -43,12 +44,10 @@ def load_default_input_shape(model_type):
         input_shape = (331, 331)
     else:
         input_shape = (299, 299)
-
     return input_shape
 
 
 def load_preprocess_input(model_type):
-
     if model_type == "VGG19":
         preprocess_input = vgg19.preprocess_input
     elif model_type == "VGG16":
@@ -65,7 +64,6 @@ def load_preprocess_input(model_type):
         preprocess_input = nasnet.preprocess_input
     else:
         preprocess_input = inception_v3.preprocess_input
-
     return preprocess_input
 
 
@@ -186,19 +184,3 @@ def generate_data(filepaths, label=None, mode="train"):
             ], axis=1)
 
     return final_df
-
-
-def NNModel(num_features, n_classes):
-
-    # This returns a tensor
-    inputs = Input(shape=(num_features,))
-
-    # a layer instance is callable on a tensor, and returns a tensor
-    x = Dense(16, activation='relu')(inputs)
-    x = Dense(16, activation='relu')(x)
-
-    predictions = Dense(n_classes, activation='softmax')(x)
-
-    model = Model(inputs=inputs, W_regularizer=l2(.0005), outputs=predictions)
-
-    return model

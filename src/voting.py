@@ -1,7 +1,7 @@
 import numpy
 import csv
-import os
-import glob
+# import os
+# import glob
 
 category_count = 18
 test_rows = 16111
